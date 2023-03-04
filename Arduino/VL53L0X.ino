@@ -73,12 +73,12 @@ void getVelocity() {
     leaveTime = micros();   
   }
 
-  // All velolcity calculations are considering that the distance between the sensors is 100mm
-  velocityMS = (100.0 / (leaveTime - enterTime)) * 1000.0;
+  // All velolcity calculations are considering that the distance between the sensors is 200mm
+  velocityMS = (200.0 / (leaveTime - enterTime)) * 1000.0;
   Serial.print("Velocidade(m/s): ");
   Serial.println(velocityMS,6);
 
-  velocityKmH = (100.0 / (leaveTime - enterTime)) * 3600.0;
+  velocityKmH = (200.0 / (leaveTime - enterTime)) * 3600.0;
   Serial.print("Velocidade(km/h): ");
   Serial.println(velocityKmH,6);
 }
