@@ -1,5 +1,6 @@
 #include <Wire.h>
 #include <Adafruit_VL53L0X.h>
+#include <ros_com.h>
 
 #define LOX1_ADDRESS 0x30
 #define LOX2_ADDRESS 0x31
@@ -95,7 +96,7 @@ void read_dual_sensors() {
 
 void setup() {
   Serial.begin(115200);
-
+  ros_init();
   while (! Serial) { delay(1); }
 
   pinMode(SHT_LOX1, OUTPUT);
@@ -115,5 +116,6 @@ void setup() {
 
 void loop() {
   read_dual_sensors();
+  ros_loop(speed);
   // delay(10);
 }
