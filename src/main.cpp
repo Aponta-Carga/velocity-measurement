@@ -7,7 +7,7 @@
 #define SHT_LOX1 27
 #define SHT_LOX2 33
 
-#define DETECTION_DISTANCE_MM 500
+#define DETECTION_DISTANCE_MM 800
 
 Adafruit_VL53L0X lox1 = Adafruit_VL53L0X();
 Adafruit_VL53L0X lox2 = Adafruit_VL53L0X();
@@ -54,27 +54,33 @@ void read_dual_sensors() {
   lox1.rangingTest(&measure1, false);
   lox2.rangingTest(&measure2, false);
 
-  Serial.print("1: ");
-  Serial.print(measure1.RangeMilliMeter);
-  Serial.print(" 2: ");
-  Serial.println(measure2.RangeMilliMeter);
+  // Serial.print("1: ");
+  // Serial.print(measure1.RangeMilliMeter);
+  // Serial.print(" 2: ");
+  // Serial.println(measure2.RangeMilliMeter);
 
   if (measure1.RangeMilliMeter <= DETECTION_DISTANCE_MM && dist1_ant >= DETECTION_DISTANCE_MM) {
-    sensor1_time = millis();
+    sensor1_time = micros();
     Serial.println("Sensor 1 detected an object");
     dist1_ant = measure1.RangeMilliMeter;
   }
   
   if (measure2.RangeMilliMeter <= DETECTION_DISTANCE_MM && dist2_ant >= DETECTION_DISTANCE_MM) {
-    sensor2_time = millis();
+    sensor2_time = micros();
     Serial.println("Sensor 2 detected an object");
     dist2_ant = measure2.RangeMilliMeter;
     readyToCalculate = true;
   }
 
   if(readyToCalculate) {
+    Serial.print("tempo1: ");
+    Serial.print(sensor1_time);
+    Serial.print(" tempo2: ");
+    Serial.print(sensor2_time);
+    Serial.print(" diferenca: ");
+    Serial.println(sensor2_time - sensor1_time);
     Serial.print("Velocidade: ");
-    speed = 200.0/(sensor2_time - sensor1_time);
+    speed = (200.0/(sensor2_time - sensor1_time)) * 1000.0;
     Serial.println(speed);
     if(measure1.RangeMilliMeter >= DETECTION_DISTANCE_MM) {
       dist1_ant = 3000;
@@ -109,5 +115,5 @@ void setup() {
 
 void loop() {
   read_dual_sensors();
-  delay(100);
+  // delay(10);
 }
