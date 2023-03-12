@@ -1,5 +1,6 @@
 #include <Wire.h>
 #include <Adafruit_VL53L0X.h>
+#include <ros_com.h>
 
 #define LED_BUILTIN 2
 
@@ -9,7 +10,7 @@
 #define SHT_LOX1 27
 #define SHT_LOX2 33
 
-#define DETECTION_DISTANCE_MM 900
+#define DETECTION_DISTANCE_MM 850
 
 Adafruit_VL53L0X lox1 = Adafruit_VL53L0X();
 Adafruit_VL53L0X lox2 = Adafruit_VL53L0X();
@@ -20,7 +21,7 @@ VL53L0X_RangingMeasurementData_t measure2;
 long int sensor1_time = 0, sensor2_time = 0;
 int dist1_ant = 3000, dist2_ant = 3000;
 bool readyToCalculate = false;
-double speed = 0;
+float speed = 0;
 
 void setID() {
 
@@ -81,7 +82,8 @@ void read_dual_sensors() {
     // Serial.println(sensor2_time - sensor1_time);
     // Serial.print("Velocidade: ");
     speed = (200.0/(sensor2_time - sensor1_time)) * 1000.0;
-    // Serial.println(speed);
+    ros_loop(speed);
+    delay(100);
     if(measure1.RangeMilliMeter >= DETECTION_DISTANCE_MM) {
       dist1_ant = 3000;
     }
@@ -94,8 +96,9 @@ void read_dual_sensors() {
 }
 
 void setup() {
-  Serial.begin(115200);
-  while (! Serial) { delay(1); }
+  // Serial.begin(115200);
+  // while (! Serial) { delay(1); }
+  ros_init();
 
   Serial.println("INICIOU!!");
 
@@ -118,11 +121,6 @@ void setup() {
 
 void loop() {
   read_dual_sensors();
-  // digitalWrite(LED_BUILTIN, HIGH);
-  // delay(1000);
-  // digitalWrite(LED_BUILTIN, LOW);
-  // delay(1000);
-  // Serial.println("A");
-  // ros_loop(speed);
-  // delay(10);
+  // float speed_test = 89.568;
+  // ros_loop(speed_test);
 }
