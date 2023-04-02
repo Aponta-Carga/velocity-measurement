@@ -1,12 +1,13 @@
-// #include "Adafruit_VL53L0X.h"
+// #include <Arduino.h>
+// #include <Adafruit_VL53L0X.h>
 
 // // address we will assign if dual sensor is present
 // #define LOX1_ADDRESS 0x30
 // #define LOX2_ADDRESS 0x31
 
 // // set the pins to shutdown
-// #define SHT_LOX1 27
-// #define SHT_LOX2 33
+// #define SHT_LOX1 33
+// #define SHT_LOX2 25
 
 // // objects for the vl53l0x
 // Adafruit_VL53L0X lox1 = Adafruit_VL53L0X();
