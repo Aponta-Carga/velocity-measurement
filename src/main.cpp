@@ -19,13 +19,13 @@ void read_dual_sensors() {
   // Serial.print(" 2: ");
   // Serial.println(measure2.RangeMilliMeter);
 
-  if (digitalRead(E3F_1) && !was_E3F_1_high) {
+  if (!digitalRead(E3F_1) && !was_E3F_1_high) {
     sensor1_time = micros();
     Serial.println("Sensor 1 detected an object");
     was_E3F_1_high = true;
   }
   
-  if (digitalRead(E3F_2) && !was_E3F_2_high) {
+  if (!digitalRead(E3F_2) && !was_E3F_2_high) {
     sensor2_time = micros();
     Serial.println("Sensor 2 detected an object");
     was_E3F_1_high = false;
