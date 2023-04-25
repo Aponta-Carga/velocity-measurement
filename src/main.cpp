@@ -13,8 +13,6 @@ std_msgs::Float32 speed_msg;
 ros::Publisher speed_pub("sensor_data", &speed_msg);
 
 // Use a single publisher and message for both "start" and "end"
-std_msgs::String event_msg;
-ros::Publisher event_pub("object_event", &event_msg);
 
 long int sensor1_timestamp = 0, sensor2_timestamp = 0;
 bool ready_to_calculate = false;
@@ -45,9 +43,9 @@ void detect_sensor_changes() {
     sensor_2_triggered = false;
 
     // Publish "end" message
-    event_msg.data = "end";
-    Serial.println(event_msg.data);
-    event_pub.publish(&event_msg);
+    //event_msg.data = 0;
+    //Serial.println(event_msg.data);
+    //event_pub.publish(&event_msg);
     nh.spinOnce();
   }
 }
@@ -62,9 +60,9 @@ void calculate_and_publish_speed() {
     
 
     // Publish "start" message
-    event_msg.data = "start";
-    Serial.println(event_msg.data);
-    event_pub.publish(&event_msg);
+    //event_msg.data = 1;
+    //Serial.println(event_msg.data);
+    //event_pub.publish(&event_msg);
     nh.spinOnce();
 
     calculated_already = false;
@@ -76,7 +74,7 @@ void setup() {
   nh.advertise(speed_pub);
 
   // Advertise the event publisher
-  nh.advertise(event_pub);
+  //nh.advertise(event_pub);
 
   Serial.begin(115200);
 
