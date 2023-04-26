@@ -46,7 +46,7 @@ void detect_sensor_changes() {
     //event_msg.data = 0;
     //Serial.println(event_msg.data);
     //event_pub.publish(&event_msg);
-    nh.spinOnce();
+    //nh.spinOnce();
   }
 }
 
@@ -56,6 +56,7 @@ void calculate_and_publish_speed() {
     Serial.println(speed);
     speed_msg.data = speed;
     speed_pub.publish(&speed_msg);
+    nh.spinOnce();
     ready_to_calculate = false;
     
 
@@ -63,7 +64,6 @@ void calculate_and_publish_speed() {
     //event_msg.data = 1;
     //Serial.println(event_msg.data);
     //event_pub.publish(&event_msg);
-    nh.spinOnce();
 
     calculated_already = false;
   }
@@ -90,5 +90,5 @@ void setup() {
 void loop() {
   detect_sensor_changes();
   calculate_and_publish_speed();
-  delay(10);
+  delay(100);
 }
