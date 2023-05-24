@@ -13,6 +13,8 @@ std_msgs::Float32 speed_msg;
 ros::Publisher speed_pub("sensor_data", &speed_msg);
 
 // Use a single publisher and message for both "start" and "end"
+std_msgs::Float32 event_msg;
+ros::Publisher event_pub("object_event", &event_msg);
 
 long int sensor1_timestamp = 0, sensor2_timestamp = 0;
 bool ready_to_calculate = false;
@@ -22,31 +24,34 @@ bool sensor_1_triggered = false, sensor_2_triggered = false;
 bool calculated_already = false;
 
 void detect_sensor_changes() {
+  if (digitalRead(SENSOR_1_PIN) && digitalRead(SENSOR_2_PIN))
+    calculated_already = false;
 
-  if (!digitalRead(SENSOR_1_PIN) && !sensor_1_triggered && !calculated_already) {
+  if (!digitalRead(SENSOR_1_PIN) && digitalRead(SENSOR_2_PIN) && !sensor_1_triggered && !calculated_already) {
     sensor1_timestamp = micros();
     sensor_1_triggered = true;
-
+    nh.spinOnce();
     
   }
-  else if (digitalRead(SENSOR_1_PIN) && sensor_1_triggered) {
+  if (digitalRead(SENSOR_1_PIN) && sensor_1_triggered) {
     sensor_1_triggered = false;
     calculated_already = false;
+    nh.spinOnce();
   }
-  if (!digitalRead(SENSOR_2_PIN) && !sensor_2_triggered && sensor_1_triggered) {
+  if (!digitalRead(SENSOR_2_PIN) && !sensor_2_triggered && sensor_1_triggered && !calculated_already) {
     sensor2_timestamp = micros();
     ready_to_calculate = true;
-    calculated_already = true;
     sensor_2_triggered = true;
+    nh.spinOnce();
   }
-  else if (digitalRead(SENSOR_2_PIN) && sensor_2_triggered) {
+  if (digitalRead(SENSOR_2_PIN) && sensor_2_triggered) {
     sensor_2_triggered = false;
 
     // Publish "end" message
-    //event_msg.data = 0;
-    //Serial.println(event_msg.data);
-    //event_pub.publish(&event_msg);
-    //nh.spinOnce();
+    event_msg.data = 0;
+    Serial.println(event_msg.data);
+    event_pub.publish(&event_msg);
+    nh.spinOnce();
   }
 }
 
@@ -59,22 +64,22 @@ void calculate_and_publish_speed() {
     nh.spinOnce();
     ready_to_calculate = false;
     
-
+    //Serial.println(F("entered..."));
     // Publish "start" message
-    //event_msg.data = 1;
-    //Serial.println(event_msg.data);
-    //event_pub.publish(&event_msg);
+    event_msg.data = 1;
+    Serial.println(event_msg.data);
+    event_pub.publish(&event_msg);
 
-    calculated_already = false;
+    calculated_already = true;
   }
 }
 
 void setup() {
   nh.initNode();
   nh.advertise(speed_pub);
-
+  speed_msg.data = 1;
   // Advertise the event publisher
-  //nh.advertise(event_pub);
+  nh.advertise(event_pub);
 
   Serial.begin(115200);
 
@@ -90,5 +95,6 @@ void setup() {
 void loop() {
   detect_sensor_changes();
   calculate_and_publish_speed();
+
   delay(100);
 }
