@@ -1,11 +1,182 @@
 #include "Wire.h"
+#include "HardwareSerial.h"
 #include <ros.h>
 #include <std_msgs/String.h>
 #include <std_msgs/Bool.h>
 #include <std_msgs/Float32.h>
 
-#define SENSOR_1_PIN 27
-#define SENSOR_2_PIN 33
+
+
+
+/*
+ * Byte 1: Always is 0x59 
+ * Byte 2: Distance in cm, low byte
+ * Byte 3: Distance in cm, high byte
+ * Byte 4: Signal strength, low byte
+ * Byte 5: Signal strength, high byte
+ * Byte 6: Reserved byte
+ * Byte 7: Raw signal quality
+ * Byte 8: Checksum of the 8 previous bytes.
+ */
+
+
+bool detectFrame( unsigned char *readBuffer ) {
+
+  return  readBuffer[ 0 ] == 0x59 &&
+          readBuffer[ 1 ] == 0x59 &&
+          (unsigned char)(
+            0x59 +
+            0x59 +
+            readBuffer[ 2 ] + 
+            readBuffer[ 3 ] + 
+            readBuffer[ 4 ] +
+            readBuffer[ 5 ] + 
+            readBuffer[ 6 ] + 
+            readBuffer[ 7 ]
+          ) == readBuffer[ 8 ];
+}
+
+unsigned int readLIDAR_B( long timeout ) {
+
+  unsigned char readBuffer[ 9 ];
+
+  long t0 = millis();
+
+  while ( Serial1.available() < 9 ) {
+
+    if ( millis() - t0 > timeout ) {
+      // Timeout
+      return 0;
+    }
+
+    delay( 10 );
+  }
+
+  for ( int i = 0; i < 9; i++ ) {
+    readBuffer[ i ] = Serial1.read();
+  }
+
+  while ( ! detectFrame( readBuffer ) ) {
+
+    if ( millis() - t0 > timeout ) {
+      // Timeout
+      return 0;
+    }
+
+    while ( Serial1.available() == 0 ) {
+      delay( 10 );
+    }
+
+    for ( int i = 0; i < 8; i++ ) {
+      readBuffer[ i ] = readBuffer[ i + 1 ];
+    }
+
+    readBuffer[ 8 ] = Serial1.read();
+
+  }
+
+
+  // Distance is in bytes 2 and 3 of the 9 byte frame.
+  unsigned int distance = ( (unsigned int)( readBuffer[ 2 ] ) ) |
+                          ( ( (unsigned int)( readBuffer[ 3 ] ) ) << 8 );
+
+  return distance;
+
+}
+
+unsigned int readLIDAR( long timeout ) {
+
+  unsigned char readBuffer[ 9 ];
+
+  long t0 = millis();
+
+  while ( Serial2.available() < 9 ) {
+
+    if ( millis() - t0 > timeout ) {
+      // Timeout
+      return 0;
+    }
+
+    delay( 10 );
+  }
+
+  for ( int i = 0; i < 9; i++ ) {
+    readBuffer[ i ] = Serial2.read();
+  }
+
+  while ( ! detectFrame( readBuffer ) ) {
+
+    if ( millis() - t0 > timeout ) {
+      // Timeout
+      return 0;
+    }
+
+    while ( Serial2.available() == 0 ) {
+      delay( 10 );
+    }
+
+    for ( int i = 0; i < 8; i++ ) {
+      readBuffer[ i ] = readBuffer[ i + 1 ];
+    }
+
+    readBuffer[ 8 ] = Serial2.read();
+
+  }
+
+
+  // Distance is in bytes 2 and 3 of the 9 byte frame.
+  unsigned int distance = ( (unsigned int)( readBuffer[ 2 ] ) ) |
+                          ( ( (unsigned int)( readBuffer[ 3 ] ) ) << 8 );
+
+  return distance;
+
+}
+
+
+void speedTest() {
+/*
+ * This function reads the Serial2 until a valid packet is found or timeout passed.
+ * Param timeout: Timeout in milliseconds.
+ * Returns distance in cm or 0 if timeout happened.
+ */
+  while ( Serial.available() > 0 ) {
+    Serial.read();
+  }
+
+  Serial.printf( "\n\nPerforming speed test...\n" );
+
+  long t0 = millis();
+
+  #define NUM_READINGS 1000
+
+  long accum = 0;
+
+  for ( int i = 0; i < NUM_READINGS; i++ ) {
+
+    accum += readLIDAR( 2000 );
+  
+  }
+
+  long t1 = millis();
+
+  float readingsPerSecond = NUM_READINGS * 1000.0f / ( t1 - t0 );
+
+  float meanDistance = ((float)accum) / NUM_READINGS;
+
+  Serial.println( "\n\nSpeed test:" );
+  Serial.printf( "%f readings per second.\n", readingsPerSecond );
+  Serial.printf( "%f mean read distance.\n", meanDistance );
+
+  Serial.println( "\n\nHit another key to continue reading the sensor distance." );
+
+  while ( Serial.available() == 0 ) {
+    delay( 10 );
+  }
+  while ( Serial.available() > 0 ) {
+    Serial.read();
+  }
+
+}
 
 ros::NodeHandle nh;
 
@@ -23,32 +194,37 @@ double speed = 0;
 bool sensor_1_triggered = false, sensor_2_triggered = false;
 bool calculated_already = false;
 
+unsigned int distance_a = 0;
+unsigned int distance_b = 0;
+
+
 void detect_sensor_changes() {
-  if (digitalRead(SENSOR_1_PIN) && digitalRead(SENSOR_2_PIN))
+  if (distance_a > 100 && distance_b > 300)
     calculated_already = false;
 
-  if (!digitalRead(SENSOR_1_PIN) && digitalRead(SENSOR_2_PIN) && !sensor_1_triggered && !calculated_already) {
+  if (distance_a < 50 && distance_b > 100 && !sensor_1_triggered && !calculated_already) {
     sensor1_timestamp = micros();
     sensor_1_triggered = true;
-    nh.spinOnce();
     
   }
-  if (digitalRead(SENSOR_1_PIN) && sensor_1_triggered) {
+  if (distance_a > 100 && sensor_1_triggered) {
     sensor_1_triggered = false;
     calculated_already = false;
-    nh.spinOnce();
+    
   }
-  if (!digitalRead(SENSOR_2_PIN) && !sensor_2_triggered && sensor_1_triggered && !calculated_already) {
+  if (distance_b < 50 && !sensor_2_triggered && sensor_1_triggered && !calculated_already) {
     sensor2_timestamp = micros();
     ready_to_calculate = true;
     sensor_2_triggered = true;
-    nh.spinOnce();
+    
   }
-  if (digitalRead(SENSOR_2_PIN) && sensor_2_triggered) {
+  if (distance_b > 100 && sensor_2_triggered) {
     sensor_2_triggered = false;
 
     // Publish "end" message
     event_msg.data = 0;
+    Serial.printf( "Distance A (cm): %d\n", distance_a );
+    Serial.printf( "Distance B (cm): %d\n", distance_b );
     Serial.println(event_msg.data);
     event_pub.publish(&event_msg);
     nh.spinOnce();
@@ -58,10 +234,12 @@ void detect_sensor_changes() {
 void calculate_and_publish_speed() {
   if (ready_to_calculate) {
     speed = (200.0 / (sensor2_timestamp - sensor1_timestamp)) * 1000.0;
+    Serial.printf( "Distance A (cm): %d\n", distance_a );
+    Serial.printf( "Distance B (cm): %d\n", distance_b );
     Serial.println(speed);
     speed_msg.data = speed;
     speed_pub.publish(&speed_msg);
-    nh.spinOnce();
+    
     ready_to_calculate = false;
     
     //Serial.println(F("entered..."));
@@ -69,10 +247,12 @@ void calculate_and_publish_speed() {
     event_msg.data = 1;
     Serial.println(event_msg.data);
     event_pub.publish(&event_msg);
-
+    nh.spinOnce();  
     calculated_already = true;
   }
 }
+
+
 
 void setup() {
   nh.initNode();
@@ -80,21 +260,44 @@ void setup() {
   speed_msg.data = 1;
   // Advertise the event publisher
   nh.advertise(event_pub);
+  
+  // Debug serial
+  Serial.begin( 115200 );
 
-  Serial.begin(115200);
+  // Serial connected to LIDAR sensor (UART 2)
+  Serial1.begin(115200, SERIAL_8N1, 18); // RX: pin 16, TX: pin 17
+  Serial2.begin(115200, SERIAL_8N1, 17); // RX: pin 16, TX: pin 17
 
-  while (!Serial) { delay(1); }
+  delay( 1000 );
+  Serial.println( "Starting..." );
 
-  pinMode(SENSOR_1_PIN, INPUT);
-  pinMode(SENSOR_2_PIN, INPUT);
-
-  Serial.println(F("Sensor's pins initialized..."));
-  Serial.println(F("Starting..."));
 }
 
 void loop() {
-  detect_sensor_changes();
-  calculate_and_publish_speed();
 
-  delay(100);
+
+  
+  
+    // Perform one distance reading and show it on Serial
+    distance_a = readLIDAR( 2000 );
+    distance_b = readLIDAR_B( 2000 );
+    
+    if ( distance_a > 0 && distance_b > 0 ) {
+      detect_sensor_changes();
+      calculate_and_publish_speed();
+      nh.spinOnce();  
+      delay(10);
+    }
+    else {
+      Serial.println( "Timeout reading LIDAR" );
+      Serial.printf( "Distance (cm): %d\n", distance_a );
+
+    }
+    
+  
+  
+  
 }
+
+
+
