@@ -180,12 +180,13 @@ void speedTest() {
 
 ros::NodeHandle nh;
 
-std_msgs::Float32 speed_msg;
-ros::Publisher speed_pub("sensor_data", &speed_msg);
+std_msgs::Float32 distance_amsg;
+ros::Publisher distance_apub("distance_a", &distance_amsg);
 
-// Use a single publisher and message for both "start" and "end"
-std_msgs::Float32 event_msg;
-ros::Publisher event_pub("object_event", &event_msg);
+
+std_msgs::Float32 distance_bmsg;
+ros::Publisher distance_bpub("distance_b", &distance_bmsg);
+
 
 long int sensor1_timestamp = 0, sensor2_timestamp = 0;
 bool ready_to_calculate = false;
@@ -199,54 +200,54 @@ unsigned int distance_b = 0;
 
 
 void detect_sensor_changes() {
-  if (distance_a > 100 && distance_b > 300)
+  if (distance_a > 500 && distance_b > 400)
     calculated_already = false;
 
-  if (distance_a < 50 && distance_b > 100 && !sensor_1_triggered && !calculated_already) {
+  if (distance_a < 500 && distance_b > 400 && !sensor_1_triggered && !calculated_already) {
     sensor1_timestamp = micros();
     sensor_1_triggered = true;
     
   }
-  if (distance_a > 100 && sensor_1_triggered) {
+  if (distance_a > 500 && sensor_1_triggered) {
     sensor_1_triggered = false;
     calculated_already = false;
     
   }
-  if (distance_b < 50 && !sensor_2_triggered && sensor_1_triggered && !calculated_already) {
+  if (distance_b < 400 && !sensor_2_triggered && sensor_1_triggered && !calculated_already) {
     sensor2_timestamp = micros();
     ready_to_calculate = true;
     sensor_2_triggered = true;
     
   }
-  if (distance_b > 100 && sensor_2_triggered) {
+  if (distance_b > 400 && sensor_2_triggered) {
     sensor_2_triggered = false;
 
     // Publish "end" message
-    event_msg.data = 0;
+    //event_msg.data = 0;
     Serial.printf( "Distance A (cm): %d\n", distance_a );
     Serial.printf( "Distance B (cm): %d\n", distance_b );
-    Serial.println(event_msg.data);
-    event_pub.publish(&event_msg);
+    //Serial.println(event_msg.data);
+    //event_pub.publish(&event_msg);
     nh.spinOnce();
   }
 }
 
 void calculate_and_publish_speed() {
   if (ready_to_calculate) {
-    speed = (200.0 / (sensor2_timestamp - sensor1_timestamp)) * 1000.0;
-    Serial.printf( "Distance A (cm): %d\n", distance_a );
+    speed = (1550.0 / (sensor2_timestamp - sensor1_timestamp)) * 1000.0;
+    Serial.printf( "Dist,ance A (cm): %d\n", distance_a );
     Serial.printf( "Distance B (cm): %d\n", distance_b );
     Serial.println(speed);
-    speed_msg.data = speed;
-    speed_pub.publish(&speed_msg);
+    //speed_msg.data = speed;
+    //speed_pub.publish(&speed_msg);
     
     ready_to_calculate = false;
     
     //Serial.println(F("entered..."));
     // Publish "start" message
-    event_msg.data = 1;
-    Serial.println(event_msg.data);
-    event_pub.publish(&event_msg);
+    //event_msg.data = 1;
+    //Serial.println(event_msg.data);
+    //event_pub.publish(&event_msg);
     nh.spinOnce();  
     calculated_already = true;
   }
@@ -256,11 +257,15 @@ void calculate_and_publish_speed() {
 
 void setup() {
   nh.initNode();
-  nh.advertise(speed_pub);
-  speed_msg.data = 1;
+  //nh.advertise(speed_pub);
+  //speed_msg.data = 1;
   // Advertise the event publisher
-  nh.advertise(event_pub);
+  //nh.advertise(event_pub);
   
+
+  nh.advertise(distance_apub);
+  nh.advertise(distance_bpub);
+
   // Debug serial
   Serial.begin( 115200 );
 
@@ -278,25 +283,22 @@ void loop() {
 
   
   
-    // Perform one distance reading and show it on Serial
-    distance_a = readLIDAR( 2000 );
-    distance_b = readLIDAR_B( 2000 );
-    
-    if ( distance_a > 0 && distance_b > 0 ) {
-      detect_sensor_changes();
-      calculate_and_publish_speed();
-      nh.spinOnce();  
-      delay(10);
-    }
-    else {
-      Serial.println( "Timeout reading LIDAR" );
-      Serial.printf( "Distance (cm): %d\n", distance_a );
+  // Perform one distance reading and show it on Serial
+  distance_a = readLIDAR( 2000 );
+  distance_b = readLIDAR_B( 2000 );
 
-    }
+  Serial.printf( "Distance A (cm): %d\n", distance_a );
+  Serial.printf( "Distance B (cm): %d\n", distance_b );
+  distance_amsg.data = distance_a;
+  distance_apub.publish(&distance_amsg);
+
+  distance_bmsg.data = distance_b;
+  distance_bpub.publish(&distance_bmsg);
+
+  nh.spinOnce();  
+      
     
-  
-  
-  
+  delay(10);
 }
 
 
