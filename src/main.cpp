@@ -198,8 +198,39 @@ bool calculated_already = false;
 unsigned int distance_a = 0;
 unsigned int distance_b = 0;
 
+int dist_a_threshold = 360;
+int dist_b_threshold = 410;
+
+float accumulated_distance_a = 0;
+float accumulated_distance_b = 0;
+int num_messages = 0;
+
+float distance_c = 0;
+
 
 void detect_sensor_changes() {
+      if (num_messages >= 50) {
+      // Calculate the mean of the accumulated distances
+      float mean_distance_a = accumulated_distance_a / num_messages;
+      float mean_distance_b = accumulated_distance_b / num_messages;
+
+      // Subtract 20 from each mean distance to get the new thresholds
+      dist_a_threshold = mean_distance_a - 20;
+      dist_b_threshold = mean_distance_b - 20;
+
+      // Calculate the square of distance_a and distance_b
+      float square_distance_a = mean_distance_a * mean_distance_a;
+      float square_distance_b = mean_distance_b * mean_distance_b;
+
+      //std::cout << "dista: " << mean_distance_a << " km/h\n";
+      //std::cout << "distb: " << mean_distance_b << " km/h\n";
+      // Calculate the square of distance_c using the Pythagorean theorem
+      float square_distance_c = square_distance_b - square_distance_a;
+
+      // Calculate the distance_c by taking the square root of square_distance_c
+      distance_c = sqrt(square_distance_c);
+      //std::cout << "dist: " << distance_c << " km/h\n";
+
   if (distance_a > 500 && distance_b > 400)
     calculated_already = false;
 
